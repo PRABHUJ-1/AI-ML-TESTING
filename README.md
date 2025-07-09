@@ -362,8 +362,10 @@ plt.show()
 ( WEEK -3 )
 PROJECT - 3 - Customer Segmentation
 ##CODE##
+Step 1: Install necessary packages
 !pip install umap-learn mlxtend --quiet
 
+# 📌 Step 2: Import libraries
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -383,7 +385,7 @@ from mlxtend.frequent_patterns import apriori, fpgrowth, association_rules
 import warnings
 warnings.filterwarnings("ignore")
 
-
+# 📌 Step 3: Generate synthetic dataset
 np.random.seed(42)
 n_samples = 3000
 data = pd.DataFrame({
@@ -399,15 +401,15 @@ data = pd.DataFrame({
     'Product_Return_Rate': np.random.uniform(0, 0.5, size=n_samples).round(2)
 })
 
-
+# 📌 Step 4: Save CSV
 data.to_csv("customer_segmentation_dataset.csv", index=False)
-print(" Dataset saved as 'customer_segmentation_dataset.csv'")
+print("✅ Dataset saved as 'customer_segmentation_dataset.csv'")
 
-
+# 📌 Step 5: Scale the data
 scaler = StandardScaler()
 scaled_data = scaler.fit_transform(data)
 
-
+# 📌 Step 6: KMeans - Elbow
 inertia = []
 for k in range(2, 11):
     kmeans = KMeans(n_clusters=k, random_state=42)
@@ -422,21 +424,22 @@ plt.ylabel("Inertia")
 plt.grid(True)
 plt.show()
 
-
+# 📌 Step 7: KMeans
 optimal_k = 4
 kmeans = KMeans(n_clusters=optimal_k, random_state=42)
 kmeans_labels = kmeans.fit_predict(scaled_data)
-print(f" KMeans Silhouette Score: {silhouette_score(scaled_data, kmeans_labels):.2f}")
+print(f"✅ KMeans Silhouette Score: {silhouette_score(scaled_data, kmeans_labels):.2f}")
 
-
+# 📌 Step 8: DBSCAN
 dbscan = DBSCAN(eps=1.2, min_samples=5)
 db_labels = dbscan.fit_predict(scaled_data)
 n_clusters_dbscan = len(set(db_labels)) - (1 if -1 in db_labels else 0)
 if n_clusters_dbscan > 1:
-    print(f" DBSCAN Silhouette Score: {silhouette_score(scaled_data, db_labels):.2f}")
+    print(f"✅ DBSCAN Silhouette Score: {silhouette_score(scaled_data, db_labels):.2f}")
 else:
-    print(" DBSCAN did not form enough clusters for silhouette score.")
+    print("⚠️ DBSCAN did not form enough clusters for silhouette score.")
 
+# 📌 Step 9: PCA Visualization
 pca = PCA(n_components=2)
 pca_2d = pca.fit_transform(scaled_data)
 pca_df = pd.DataFrame(pca_2d, columns=["PCA1", "PCA2"])
@@ -454,7 +457,7 @@ plt.title("DBSCAN Clusters (PCA View)")
 plt.tight_layout()
 plt.show()
 
-
+# 📌 Step 10: t-SNE
 tsne = TSNE(n_components=2, perplexity=30, random_state=42)
 tsne_2d = tsne.fit_transform(scaled_data)
 plt.figure(figsize=(8,6))
@@ -463,6 +466,79 @@ plt.title("t-SNE Visualization (KMeans Labels)")
 plt.grid(True)
 plt.show()
 
+# 📌 Step 11: UMAP
+reducer = umap.UMAP(random_state=42)
+umap_2d = reducer.fit_transform(scaled_data)
+plt.figure(figsize=(8,6))
+sns.scatterplot(x=umap_2d[:,0], y=umap_2d[:,1], hue=kmeans_labels, palette='Set3')
+plt.title("UMAP Visualization (KMeans Labels)")
+plt.grid(True)
+plt.show()
+
+# 📌 Step 12: Isolation Forest (Outlier Detection)
+iso = IsolationForest(contamination=0.02, random_state=42)
+iso_preds = iso.fit_predict(scaled_data)
+iso_outliers = np.where(iso_preds == -1)[0]
+print(f"✅ Isolation Forest Outliers: {len(iso_outliers)}")
+
+# 👉 Visualize Isolation Forest Outliers on PCA
+pca_df["Outlier_IF"] = iso_preds
+plt.figure(figsize=(8,6))
+sns.scatterplot(data=pca_df, x="PCA1", y="PCA2", hue="Outlier_IF", palette={1:"green", -1:"red"})
+plt.title("Isolation Forest Outlier Detection (Red = Outlier)")
+plt.grid(True)
+plt.show()
+
+# 📌 Step 13: Local Outlier Factor (LOF)
+lof = LocalOutlierFactor(n_neighbors=20)
+lof_preds = lof.fit_predict(scaled_data)
+lof_outliers = np.where(lof_preds == -1)[0]
+print(f"✅ LOF Outliers: {len(lof_outliers)}")
+
+# 👉 Visualize LOF Outliers on PCA
+pca_df["Outlier_LOF"] = lof_preds
+plt.figure(figsize=(8,6))
+sns.scatterplot(data=pca_df, x="PCA1", y="PCA2", hue="Outlier_LOF", palette={1:"blue", -1:"orange"})
+plt.title("LOF Outlier Detection (Orange = Outlier)")
+plt.grid(True)
+plt.show()
+
+# 📌 Step 14: Market Basket – Prepare Binary Data
+binned_df = data.copy()
+for col in binned_df.columns:
+    binned_df[col] = pd.qcut(binned_df[col], q=4, labels=False)
+
+basket = pd.get_dummies(binned_df.astype(str))
+
+# 📌 Step 15: Apriori
+frequent_ap = apriori(basket, min_support=0.05, use_colnames=True)
+rules_ap = association_rules(frequent_ap, metric="lift", min_threshold=1)
+print(f"✅ Apriori Rules Generated: {rules_ap.shape[0]}")
+
+# 👉 Visualize Apriori Rules
+top_ap = rules_ap.sort_values(by='lift', ascending=False).head(10)
+plt.figure(figsize=(10,6))
+sns.barplot(data=top_ap, x="lift", y=top_ap["antecedents"].astype(str))
+plt.title("Top 10 Apriori Rules by Lift")
+plt.xlabel("Lift")
+plt.ylabel("Rule")
+plt.tight_layout()
+plt.show()
+
+# 📌 Step 16: FP-Growth
+frequent_fp = fpgrowth(basket, min_support=0.05, use_colnames=True)
+rules_fp = association_rules(frequent_fp, metric="lift", min_threshold=1)
+print(f"✅ FP-Growth Rules Generated: {rules_fp.shape[0]}")
+
+# 👉 Visualize FP-Growth Rules
+top_fp = rules_fp.sort_values(by='lift', ascending=False).head(10)
+plt.figure(figsize=(10,6))
+sns.barplot(data=top_fp, x="lift", y=top_fp["antecedents"].astype(str))
+plt.title("Top 10 FP-Growth Rules by Lift")
+plt.xlabel("Lift")
+plt.ylabel("Rule")
+plt.tight_layout()
+plt.show()
 reducer = umap.UMAP(random_state=42)
 umap_2d = reducer.fit_transform(scaled_data)
 plt.figure(figsize=(8,6))
