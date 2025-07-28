@@ -1,4 +1,4 @@
-# AI-ML-TESTING (WEEK - 1 TO 4)
+# AI & ML MODELTESTING (WEEK - 1 TO 4)
 # PROJECT-1   Internship Fit Predictor using Classification Algorithms
 ##CODE##
 Step 1: Import Required Libraries
